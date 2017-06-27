@@ -1,1 +1,11 @@
+.name {
+      color: dodgerblue;
+    }
 
+.email {
+      color: green;
+    }
+
+.heading {
+	text-align: center;
+}
