@@ -11,19 +11,13 @@
 		}
 
 		$scope.addContact = function() {
-			// console.log($scope.user);
 			$http.post('stereobasecontacts', $scope.user).then(postSuccess, postError);
 			function postSuccess(response) {
 				console.log(response);
 			}
 			function postError(error){
-				// console.log(error);
-				// console.log("we have an error");
+				console.log("we have an error");
 			}
-			// console.log("Submit works");
-			// $http.post('stereobasecontacts', $scope.user)
-			// console.log($scope.user);
 		};
-		// console.log($scope.user);
 	});
 })();
