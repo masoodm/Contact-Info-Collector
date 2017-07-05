@@ -1,7 +1,7 @@
 (function(){
 	var app = angular.module('mainModule',['ngMaterial', 'ngMessages']);
 	app.controller('FormCtrl', function($scope, $http){
-		$http.get('/stereobasecontacts').then(successCallBack,errorCallBack);
+		$http.get('/api/contacts').then(successCallBack,errorCallBack);
 		function successCallBack(response) {
 			// console.log("I got data");
 			// console.log(response);
@@ -11,7 +11,7 @@
 		}
 
 		$scope.addContact = function() {
-			$http.post('stereobasecontacts', $scope.user).then(postSuccess, postError);
+			$http.post('/api/contacts', $scope.user).then(postSuccess, postError);
 			function postSuccess(response) {
 				console.log(response);
 			}

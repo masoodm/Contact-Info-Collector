@@ -1,87 +1,108 @@
-var express = require('express');
-var mongojs = require('mongojs');
-var db = mongojs('stereobasecontacts', ['stereobasecontacts']);
-var bodyParser = require('body-parser');
-// var mongodb = require('mongodb');
-// var path = require('path');
+var express = require("express");
+var bodyParser = require("body-parser");
+var mongodb = require("mongodb");
+var ObjectID = mongodb.ObjectID;
+
+var CONTACTS_COLLECTION = "contacts";
+
 var app = express();
-
-// var pg = require('pg');
-
-var port = process.env.PORT || 8080;
-
-// var CONTACTS_COLLECTION = "contacts";
-// var ObjectID = mongodb.ObjectID;
-
-
-//static stuff in app will be allowed to run in __dirname which is whatever the folder name is...
 app.use(express.static(__dirname + "/public"));
-app.use(bodyParser.json());
 app.use('/bower_components', express.static(__dirname+'/bower_components'));
+app.use(bodyParser.json());
 
+//Create a databae variable outside of the databasee connection callback to reuse the connection pool in your app
+var db;
 
-// // mongodb.MongoClient.connect(process.env.MONGODB_URI, function(err, database) {
-// // 	if (err){
-// // 		console.log(err);
-// // 		process.exit(1);
-// // 	}
+//Conenct to the datbase before starting the application server
+mongodb.MongoClient.connect(process.env.MONGODB_URI, function (err, database) {
+	if (err) {
+		console.log(err);
+		process.exit(1);
+	}
 
-// // 	db = database;
-// // 	console.log("Database connection ready");
+	//save database object from the callback for reuse
+	db = database;
+	console.log("Database connection ready");
 
-// // 	app.listen(port, function(){
-// // 	console.log("app running on port" + port);
-// // });
-
-
-// // })
-
-// //routes
-
-// app.get('/db', function(request, response) {
-// 	pg.connect(process.env.DATABASE_URL)
-// })
-
-
-
-app.get("/", function(req,res){
-	res.render("index");
-});
-
-
-app.get('/stereobasecontacts', function(req, res){
-	// db.collection(CONTACTS_COLLECTION).find({}).toArray(function(err, docs){
-	// 	if(err){
-	// 		handleError(res, err.message, "Failed to get contacts.");
-	// 	} else {
-	// 		res.status(200).json(docs);
-	// 	}
-	// });
-	console.log("I have recieved a GET request");
-	db.stereobasecontacts.find(function(err, docs){
-		// console.log(docs);
-		res.json(docs);
+	//Initialize the app.
+	var server = app.listen(process.env.PORT || 8080, function () {
+		var port = server.address().port;
+		console.log("App now running on port", port);
 	});
 });
 
-app.post('/stereobasecontacts', function(req,res){
-	// console.log(req.body);
-	// var newContact = req.body;
-	// newContact.createDate = new Date();
+function handleError(res, reason, message, code) {
+	console.log("ERROR: " + reason);
+	res.status(code || 500).json({"error": message});
+}
 
-	// db.collection(CONTACTS_COLLECTION).insertOne(newContact, function(err, doc) {
- //    if (err) {
- //      handleError(res, err.message, "Failed to create new contact.");
- //    } else {
- //      res.status(201).json(doc.ops[0]);
- //    }
- //  });
+/*  "/api/contacts"
+ *    GET: finds all contacts
+ *    POST: creates a new contact
+ */
 
-	db.stereobasecontacts.insert(req.body, function(err, doc){
-		res.json(doc);
-	});
-});
+ app.get("/api/contacts", function(req,res) {
+ 	db.collection(CONTACTS_COLLECTION).find({}).toArray(function(err, docs) {
+    if (err) {
+      handleError(res, err.message, "Failed to get contacts.");
+    } else {
+      res.status(200).json(docs);
+    }
+  });
+ });
 
-app.listen(port, function(){
-	console.log("app running on port" + port);
-});
+ app.post("/api/contacts", function(req, res) {
+ 	var newContact = req.body;
+ 	newContact.createDate = new Date();
+
+  if (!req.body.name) {
+    handleError(res, "Invalid user input", "Must provide a name.", 400);
+  }
+
+  db.collection(CONTACTS_COLLECTION).insertOne(newContact, function(err, doc) {
+    if (err) {
+      handleError(res, err.message, "Failed to create new contact.");
+    } else {
+      res.status(201).json(doc.ops[0]);
+    }
+  });
+ });
+
+ /*  "/api/contacts/:id"
+ *    GET: find contact by id
+ *    PUT: update contact by id
+ *    DELETE: deletes contact by id
+ */
+
+ app.get("/api/contacts/:id", function(req,res) {
+ 	db.collection(CONTACTS_COLLECTION).findOne({_id: new ObjectID(req.params.id) }, function(err, doc) {
+ 		if(err){
+ 			handleError(res, err.message, "Failed to get contact");
+ 		} else {
+ 			res.status(200).json(doc);
+ 		}
+ 	});
+ });
+
+ app.put("/api/contacts/:id", function(req, res) {
+ 	var updateDoc = req.body;
+ 	delete updateDoc._id;
+
+ 	db.collection(CONTACTS_COLLECTION).updateOne({_id: new ObjectID(req.params.id)}, updateDoc, function(err,doc) {
+ 		if(err) {
+ 			handleError(res, err.message, "Failed to update contact");
+ 		} else {
+ 			res.status(200).json(req.params.id);
+ 		}
+ 	});
+ });
+
+ app.delete("/api/contacts/:id", function(req,res) {
+ 	db.collection(CONTACTS_COLLECTION).deleteOne({_id: new ObjectID(req.params.id)}, function(err, result) {
+ 		if(err){
+ 			handleError(res, err.message, "Failed to delete contact");
+ 		} else {
+ 			res.status(200).json(req.params.id);
+ 		}
+ 	});
+ });
